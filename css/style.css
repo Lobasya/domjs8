@@ -1,0 +1,45 @@
+.container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.card {
+    width: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid black;
+    flex-direction: column;
+    padding: 10px;
+    margin: 0 0 10px 10px;
+}
+
+.card * {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    font-size: 12px;
+}
+
+.card .img {
+    width: auto;
+    height: 80px;
+}
+
+.like {
+    width: 10px;
+    height: 10px;
+    border: 1px solid black;
+    border-radius: 50%;
+}
+.card button:last-child {
+    width: 90%;
+}
+
+.like.active{
+    background-color: red;
+    border: 1px solid red;
+}
