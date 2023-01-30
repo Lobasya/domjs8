@@ -1,5 +1,5 @@
 .container {
-    width: 100%;
+    width: calc(100% - 150px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -42,4 +42,26 @@
 .like.active{
     background-color: red;
     border: 1px solid red;
+}
+
+main {
+    display: flex;
+    justify-content: center;
+}
+
+.filters_container {
+    width: 150px;
+    height: 600px;
+    border: 1px solid black;
+}
+
+.filter_item {
+    margin: 5px;
+    border-bottom: 1px solid black;
+}
+.filter_item p{
+    margin: 0;
+}
+label {
+    display: block;
 }
