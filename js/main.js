@@ -16,6 +16,51 @@ class Item {
     toggleLike() {
         return this.like = !this.like;
     }
+
+    checkIsNameIncludes(name) {
+        const nameAsLowerCase = name.toLowerCase();
+        return this.name.toLowerCase().includes(nameAsLowerCase);
+    }
+
+    checkIsColorIncludes(colors) {
+        // colors ['red', 'blue', 'green']
+        // this.color ['red', 'yellow', 'black', 'green']
+        if(!colors.length) return true;
+
+        for(const color of colors) {
+            const isExists = this.color.includes(color);
+            if(isExists) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    checkIsStorageIncludes(storages) {
+        // storages [256, 512, 1024]
+        // this.storage 2048
+        if(!storages.length) return true;
+
+        for(const storage of storages) {
+            if(this.storage === storage){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    checkIsRamIncludes(rams) {
+        // storages [256, 512, 1024]
+        // this.storage 2048
+        if(!rams.length) return true;
+
+        for(const ram of rams) {
+            if(this.ram === ram){
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 class ItemsModel {
@@ -36,10 +81,45 @@ class ItemsModel {
             .filter((item, index, arr) => arr.indexOf(item) === index && item !== null);
     }
 
+    get availableRams() {
+        return this.items
+            .map(item => item.ram)
+            .filter((item, index, arr) => arr.indexOf(item) === index && item !== null);
+    }
+
     // Get list with items based on query as substring in item name
     findManyByName(name) {
         const nameAsLowerCase = name.toLowerCase();
         return this.items.filter(item => item.name.toLowerCase().includes(nameAsLowerCase));
+    }
+
+    filterItems(filter = {}) {
+        const {
+            name = '',
+            color = [],
+            storage = [],
+            ram = []
+        } = filter;
+
+        return this.items.filter(item => {
+            // Check on substring includes in string
+            const isNameIncluded = item.checkIsNameIncludes(name);
+            if(!isNameIncluded) return false;
+
+            // Check on substring includes in string
+            const isColorIncluded = item.checkIsColorIncludes(color);
+            if(!isColorIncluded) return false;
+
+            // Check on substring includes in string
+            const isStorageIncluded = item.checkIsStorageIncludes(storage);
+            if(!isStorageIncluded) return false;
+
+            // Check on substring includes in string
+            const isRamIncluded = item.checkIsRamIncludes(ram);
+            if(!isRamIncluded) return false;
+
+            return true;
+        })
     }
 }
 
@@ -60,10 +140,15 @@ class RenderCards {
             <img src="${item.absoluteImgPath}" alt="${item.name}" class="img">
             <button class="like"></button>
             <p>${item.name}</p>
+            <p>Colors: ${item.color.join(', ')}</p>
             <p>Left in stock: ${item.orderInfo.inStock}</p>
             <p>Price: ${item.price}$</p>
             <button>Add to cart</button>
         `;
+
+        cardElem.onclick = (e) => {
+            console.log(item);
+        }
 
         const likeBtn = cardElem.querySelector('.like');
 
@@ -99,6 +184,7 @@ class Filter {
         this.sort = 'default';
         this.color = [];
         this.storage = [];
+        this.ram = []
         this.#itemsModel = itemsModel;
         this.#renderCards = renderCards;
     }
@@ -117,11 +203,11 @@ class Filter {
             this[key].push(value);
         }
         this.#findAndRerender();
-        console.log(this)
     }
 
     #findAndRerender() {
-        const items = this.#itemsModel.findManyByName(this.name);
+        const items = this.#itemsModel.filterItems({...this});
+
         this.#renderCards.renderCards(items);
     }
 }
@@ -141,6 +227,11 @@ class RenderFilters {
                 displayName: 'Storage',
                 name: 'storage',
                 options: itemsModel.availableStorage,
+            },
+            {
+                displayName: 'RAM',
+                name: 'ram',
+                options: itemsModel.availableRams,
             },
         ];
 
@@ -170,7 +261,6 @@ class RenderFilters {
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.value = option;
             checkbox.onchange = () => {
                 this.#filter.setFilter(optionsData.name, option);
             }
