@@ -61,12 +61,24 @@ class Item {
         }
         return false;
     }
+
+    checkIsPriceRangeIncludes(minPrice, maxPrice) {
+        return this.price <= maxPrice && this.price >= minPrice;
+    }
 }
 
 class ItemsModel {
     constructor() {
         // Create Item instances list from items list
         this.items = items.map(item => new Item(item));
+    }
+
+    get minPrice(){
+        return this.items.reduce((acc, item) => acc.price < item.price ? acc : item).price
+    }
+
+    get maxPrice(){
+        return this.items.reduce((acc, item) => acc.price > item.price ? acc : item).price
     }
 
     get availableColors() {
@@ -98,7 +110,9 @@ class ItemsModel {
             name = '',
             color = [],
             storage = [],
-            ram = []
+            ram = [],
+            minPrice = this.minPrice,
+            maxPrice = this.maxPrice
         } = filter;
 
         return this.items.filter(item => {
@@ -118,6 +132,10 @@ class ItemsModel {
             const isRamIncluded = item.checkIsRamIncludes(ram);
             if(!isRamIncluded) return false;
 
+            // Check on substring includes in string
+            const isPriceRangeIncludes = item.checkIsPriceRangeIncludes(minPrice, maxPrice);
+            if(!isPriceRangeIncludes) return false;
+
             return true;
         })
     }
@@ -125,8 +143,9 @@ class ItemsModel {
 
 class RenderCards {
     // Dependency injection (but it's not true)
-    constructor(itemsModel) {
+    constructor(itemsModel, cart) {
         this.cardsContainer = document.querySelector('.container'); // Container element
+        this.cart = cart;
         this.renderCards(itemsModel.items); // Auto render cards after init page
     }
 
@@ -143,11 +162,19 @@ class RenderCards {
             <p>Colors: ${item.color.join(', ')}</p>
             <p>Left in stock: ${item.orderInfo.inStock}</p>
             <p>Price: ${item.price}$</p>
-            <button>Add to cart</button>
+            <button class="add_to_cart">Add to cart</button>
         `;
 
         cardElem.onclick = (e) => {
             console.log(item);
+        }
+
+        const addToCartBtn = cardElem.querySelector('.add_to_cart');
+
+        addToCartBtn.onclick = (event) => {
+            event.stopPropagation();
+            this.cart.addToCart(item);
+            console.log(this.cart.items);
         }
 
         const likeBtn = cardElem.querySelector('.like');
@@ -169,7 +196,7 @@ class RenderCards {
         this.cardsContainer.innerHTML = '';
 
         // Cereate elements with cards based on items list
-        const elements = items.map(item => RenderCards.renderCard(item));
+        const elements = items.map(item => RenderCards.renderCard.call(this, item));
 
         // Add elements to container
         this.cardsContainer.append(...elements);
@@ -180,13 +207,15 @@ class Filter {
     #itemsModel = null;
     #renderCards = null;
     constructor(itemsModel, renderCards) {
+        this.#itemsModel = itemsModel;
+        this.#renderCards = renderCards;
         this.name = '';
         this.sort = 'default';
         this.color = [];
         this.storage = [];
         this.ram = []
-        this.#itemsModel = itemsModel;
-        this.#renderCards = renderCards;
+        this.minPrice = this.#itemsModel.minPrice
+        this.maxPrice = this.#itemsModel.maxPrice
     }
 
     setFilter(key, value) {
@@ -238,6 +267,11 @@ class RenderFilters {
         this.inputName = document.querySelector('.name_input');
         this.selectSort = document.getElementById('sortFilter');
 
+        this.minPriceInput = document.getElementById('minPriceFilter');
+        this.maxPriceInput = document.getElementById('maxPriceFilter');
+        this.minPriceInput.value = this.#filter.minPrice
+        this.maxPriceInput.value = this.#filter.maxPrice
+
         this.inputName.oninput = (event) => {
             const { value } = event.target;
             this.#filter.setFilter('name', value);
@@ -247,6 +281,16 @@ class RenderFilters {
             const { value } = event.target;
             this.#filter.setFilter('sort', value);
         }
+
+        this.minPriceInput.oninput = debounce((event) => {
+            const { value } = event.target;
+            this.#filter.setFilter('minPrice', value);
+        }, 500)
+
+        this.maxPriceInput.oninput = debounce((event) => {
+            const { value } = event.target;
+            this.#filter.setFilter('maxPrice', value);
+        }, 500)
 
         this.renderFilters(this.filterOptions);
     }
@@ -284,8 +328,58 @@ class RenderFilters {
     }
 }
 
+class Cart {
+    constructor(){
+        this.items = [];
+        this.name = 'My sweet cart';
+    }
+
+    get totalAmmount(){
+        return this.items.reduce((acc, item) => {
+            return acc + item.amount;
+        }, 0)
+    }
+
+    get totalPrice(){
+        return this.items.reduce((acc, it) => {
+            return acc + it.amount * it.item.price;
+        }, 0)
+    }
+
+    addToCart(item) {
+        const { id } = item;
+        const itemInCart = this.items.find(it => it.id === id);
+        if(itemInCart) {
+            if(itemInCart.amount < 4) {
+                itemInCart.amount++
+            }
+            return;
+        }
+        const newItemInCart = {
+            id,
+            item,
+            amount: 1
+        }
+
+        this.items.push(newItemInCart);
+    }
+
+    decreaseAmountInCart(item) {
+        const { id } = item;
+        const itemInCart = this.items.find(it => it.id === id);
+        if(itemInCart && itemInCart.amount !== 0) {
+            itemInCart.amount--
+        }
+    }
+
+    removeFromCart(id) {
+        this.items = this.items.filter(it => it.id !== id);
+    }
+}
+
 
 const itemsModel = new ItemsModel();
-const renderCards = new RenderCards(itemsModel);
+const cart = new Cart();
+const renderCards = new RenderCards(itemsModel, cart);
 const filter = new Filter(itemsModel, renderCards);
 const renderFilters = new RenderFilters(itemsModel, filter);
